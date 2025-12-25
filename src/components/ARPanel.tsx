@@ -56,7 +56,11 @@ export const ARPanel: React.FC<ARPanelProps> = ({
     const animatedStyle = useAnimatedStyle(() => {
         // Calculate relative bearing in the UI thread
         let relativeBearing = (bearing - sharedHeading.value + 540) % 360 - 180;
-        const screenPosX = relativeBearing * 1.5 * zoomMagnification;
+
+        // FOV adjustment for Landscape:
+        // In landscape, we want a wider angular field to be visible across the screen.
+        // If 1.5 was good for portrait, 2.5~3.0 might be better for landscape to keep a natural sense of scale.
+        const screenPosX = relativeBearing * 2.5 * zoomMagnification;
 
         // Scale and Opacity based on focus (center of screen)
         const focusIntensity = Math.abs(screenPosX) < 30 ? 1 - Math.abs(screenPosX) / 30 : 0;

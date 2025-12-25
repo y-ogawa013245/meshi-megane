@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { CameraView } from 'expo-camera';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PinchGestureHandler, State } from 'react-native-gesture-handler';
@@ -12,10 +12,8 @@ import { getDistance, getBearing, extractFloor } from '../services/arUtils';
 import { SearchFilters, INITIAL_FILTERS } from '../constants/searchConstants';
 import { fetchNearbyShops, Shop } from '../services/shopService';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-
 export const ARScreen = () => {
-    // Note: 'heading' here is now the "Stable World Heading" from our new hook logic
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const { hasCameraPermission, hasLocationPermission, location, heading } = useARSensors();
 
     // API Data States
@@ -166,6 +164,13 @@ const styles = StyleSheet.create({
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
     errorText: { color: '#FF5252', fontSize: 16 },
     debugContainer: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100 },
-    debugPanel: { backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, marginHorizontal: 20, borderRadius: 8 },
+    debugPanel: {
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        padding: 6,
+        alignSelf: 'center',
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        marginTop: 10,
+    },
     debugValue: { color: '#00FF00', fontSize: 10, fontFamily: 'monospace', textAlign: 'center' },
 });
