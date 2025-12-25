@@ -1,0 +1,50 @@
+[
+    {
+        "id": "haebaru-001",
+        "name": "地元の味 つかざん食堂",
+        "genre": "和食",
+        "catch": "おばぁの味が自慢！ボリューム満点のゴーヤーチャンプルー",
+        "address": "沖縄県島尻郡南風原町津嘉山 1F",
+        "lat": 26.1855,
+        "lng": 127.7125,
+        "thumbnail": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=200",
+        "rating": 4.5,
+        "open": "11:00 - 20:00"
+    },
+    {
+        "id": "haebaru-002",
+        "name": "丘の上のカフェ・ルミエール",
+        "genre": "カフェ",
+        "catch": "南風原の街並みを一望できる絶景テラス",
+        "address": "沖縄県島尻郡南風原町津嘉山 2F",
+        "lat": 26.1865,
+        "lng": 127.7140,
+        "thumbnail": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=200",
+        "rating": 4.2,
+        "open": "10:00 - 18:00"
+    },
+    {
+        "id": "haebaru-003",
+        "name": "南風原ナイト居酒屋",
+        "genre": "居酒屋",
+        "catch": "泡盛と島料理で夜を楽しむ地元密着のお店",
+        "address": "沖縄県島尻郡南風原町津嘉山 1F",
+        "lat": 26.1840,
+        "lng": 127.7110,
+        "thumbnail": "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=200",
+        "rating": 3.8,
+        "open": "18:00 - 02:00"
+    },
+    {
+        "id": "shibuya-001",
+        "name": "近未来カフェ ネオン (渋谷)",
+        "genre": "カフェ",
+        "catch": "SF気分で楽しむ最先端のコーヒータイム",
+        "address": "東京都渋谷区道玄坂1-2-3 渋谷ビル 5F",
+        "lat": 35.658034,
+        "lng": 139.701634,
+        "thumbnail": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=200",
+        "rating": 4.5,
+        "open": "10:00 - 22:00"
+    }
+]
