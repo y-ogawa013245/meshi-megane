@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { StyleSheet, View, Text, ActivityIndicator, Dimensions } from 'react-native';
 import { CameraView } from 'expo-camera';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { PinchGestureHandler, State } from 'react-native-gesture-handler';
 import { useARSensors } from '../hooks/useARSensors';
 import { ARPanel } from '../components/ARPanel';
 import { SearchFAB } from '../components/SearchFAB';
@@ -9,22 +10,69 @@ import { SearchModal } from '../components/SearchModal';
 import { ShopDetailModal } from '../components/ShopDetailModal';
 import { getDistance, getBearing, extractFloor } from '../services/arUtils';
 import { SearchFilters, INITIAL_FILTERS } from '../constants/searchConstants';
-import dummyShops from '../assets/data/dummyShops.json';
+import { fetchNearbyShops, Shop } from '../services/shopService';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export const ARScreen = () => {
+    // Note: 'heading' here is now the "Stable World Heading" from our new hook logic
     const { hasCameraPermission, hasLocationPermission, location, heading } = useARSensors();
 
-    const [zoomLevel, setZoomLevel] = useState(1);
+    // API Data States
+    const [shops, setShops] = useState<Shop[]>([]);
+    const [isFetching, setIsFetching] = useState(false);
+
+    // Zoom States
+    const [zoom, setZoom] = useState(0);
+    const baseZoom = useRef(0);
+
     const [isSearchVisible, setIsSearchVisible] = useState(false);
     const [filters, setFilters] = useState<SearchFilters>(INITIAL_FILTERS);
     const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
 
+    // Fetch shops when location or filters change
+    useEffect(() => {
+        if (location) {
+            const loadShops = async () => {
+                setIsFetching(true);
+                const data = await fetchNearbyShops(
+                    location.coords.latitude,
+                    location.coords.longitude,
+                    filters
+                );
+                setShops(data);
+                setIsFetching(false);
+            };
+            loadShops();
+        }
+    }, [location?.coords.latitude, location?.coords.longitude, filters.distance, filters.genre]);
+
+    // Pinch Gesture Handler
+    const onPinchGestureEvent = (event: any) => {
+        let scale = event.nativeEvent.scale;
+        let newZoom = baseZoom.current + (scale - 1) * 0.5;
+        setZoom(Math.max(0, Math.min(1, newZoom)));
+    };
+
+    const onPinchHandlerStateChange = (event: any) => {
+        if (event.nativeEvent.state === State.END) {
+            baseZoom.current = zoom;
+        }
+    };
+
     const filteredShops = useMemo(() => {
         if (!location) return [];
-        return dummyShops.filter((shop) => {
+
+        const zoomMagnification = 1 + zoom * 4;
+
+        return shops.filter((shop) => {
             const distance = getDistance(location.coords.latitude, location.coords.longitude, shop.lat, shop.lng);
-            if (distance > filters.distance) return false;
-            if (filters.genre !== 'すべて' && shop.genre !== filters.genre) return false;
+
+            // Zoom Logic: Hide close shops when zoomed in
+            if (zoomMagnification > 1.5 && distance < 200) {
+                return false;
+            }
+
             if (shop.rating === null) {
                 if (!filters.includeNoRating) return false;
             } else if (filters.minRating !== null && shop.rating < filters.minRating) {
@@ -32,9 +80,9 @@ export const ARScreen = () => {
             }
             return true;
         });
-    }, [location, filters]);
+    }, [location, shops, zoom, filters.includeNoRating, filters.minRating]);
 
-    const selectedShop = useMemo(() => dummyShops.find(s => s.id === selectedShopId) || null, [selectedShopId]);
+    const selectedShop = useMemo(() => shops.find(s => s.id === selectedShopId) || null, [selectedShopId, shops]);
 
     if (hasCameraPermission === null || hasLocationPermission === null) {
         return (
@@ -44,47 +92,63 @@ export const ARScreen = () => {
         );
     }
 
+    const zoomMagnification = 1 + zoom * 4;
+
     return (
         <View style={styles.container}>
-            {hasCameraPermission ? (
-                <CameraView style={StyleSheet.absoluteFill} facing="back" />
-            ) : (
-                <View style={styles.center}><Text style={styles.errorText}>カメラ権限が必要です</Text></View>
-            )}
-
-            <View style={styles.overlay} pointerEvents="box-none">
-                {location && filteredShops.map((shop) => {
-                    const distance = getDistance(location.coords.latitude, location.coords.longitude, shop.lat, shop.lng);
-                    const bearing = getBearing(location.coords.latitude, location.coords.longitude, shop.lat, shop.lng);
-                    let relativeBearing = (bearing - heading + 540) % 360 - 180;
-                    const screenPosX = relativeBearing * 1.5;
-                    const floor = extractFloor(shop.address);
-                    const screenPosY = (floor - 1) * 8;
-
-                    return (
-                        <ARPanel
-                            key={shop.id}
-                            id={shop.id}
-                            name={shop.name}
-                            genre={shop.genre}
-                            distance={distance}
-                            rating={shop.rating}
-                            thumbnail={shop.thumbnail}
-                            screenPosX={screenPosX}
-                            screenPosY={screenPosY}
-                            onTap={(id) => setSelectedShopId(id)}
+            <PinchGestureHandler
+                onGestureEvent={onPinchGestureEvent}
+                onHandlerStateChange={onPinchHandlerStateChange}
+            >
+                <View style={styles.container}>
+                    {hasCameraPermission ? (
+                        <CameraView
+                            style={StyleSheet.absoluteFill}
+                            facing="back"
+                            zoom={zoom}
                         />
-                    );
-                })}
-            </View>
+                    ) : (
+                        <View style={styles.center}><Text style={styles.errorText}>カメラ権限が必要です</Text></View>
+                    )}
+
+                    <View style={styles.overlay} pointerEvents="box-none">
+                        {location && filteredShops.map((shop) => {
+                            const distance = getDistance(location.coords.latitude, location.coords.longitude, shop.lat, shop.lng);
+                            const bearing = getBearing(location.coords.latitude, location.coords.longitude, shop.lat, shop.lng);
+
+                            const floor = extractFloor(shop.address);
+                            const screenPosY = (floor - 1) * 8;
+
+                            return (
+                                <ARPanel
+                                    key={shop.id}
+                                    id={shop.id}
+                                    name={shop.name}
+                                    genre={shop.genre}
+                                    distance={distance}
+                                    rating={shop.rating}
+                                    thumbnail={shop.thumbnail}
+                                    bearing={bearing}
+                                    heading={heading} // Passing the stable heading
+                                    zoomMagnification={zoomMagnification}
+                                    screenPosY={screenPosY}
+                                    onTap={(id) => setSelectedShopId(id)}
+                                />
+                            );
+                        })}
+                    </View>
+                </View>
+            </PinchGestureHandler>
 
             <View style={styles.debugContainer} pointerEvents="none">
                 <SafeAreaView edges={['top']}>
                     <View style={styles.debugPanel}>
                         <Text style={styles.debugValue}>
-                            CAM:{hasCameraPermission ? 'OK' : 'NG'} LOC:{hasLocationPermission ? 'OK' : 'NG'} HEAD:{heading.toFixed(0)}°
+                            V-ROOM ACTIVE | HEAD:{heading.toFixed(0)}° ZOOM:{zoomMagnification.toFixed(1)}x
                         </Text>
-                        <Text style={styles.debugValue}>SHOPS:{filteredShops.length} FOUND</Text>
+                        <Text style={styles.debugValue}>
+                            SHOPS:{filteredShops.length} {isFetching ? '(FETCHING...)' : 'FOUND'}
+                        </Text>
                     </View>
                 </SafeAreaView>
             </View>
